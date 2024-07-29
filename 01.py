@@ -1,6 +1,6 @@
 from collections import UserDict
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class Field:
     def __init__(self, value=None):
@@ -100,6 +100,36 @@ class AddressBook(UserDict):
         if name in self.data:
             del self.data[name]
 
+
+    @staticmethod
+    def get_upcoming_birthdays(records, days=7):
+        now = datetime.now()
+        upcoming_birthdays_list = []
+
+        for record in records:
+            if record.birthday:
+                try:
+                    birthday_date = datetime.strptime(record.birthday.value, "%d/%m/%Y").replace(year=now.year)
+                except ValueError:
+                    # Skip invalid dates
+                    continue
+                
+                upcoming_date = now + timedelta(days=days)
+
+                if now <= birthday_date <= upcoming_date:
+                    # Adjust to the following Monday if the birthday falls on a weekend
+                    if birthday_date.weekday() in [5, 6]:
+                        days_to_monday = (7 - birthday_date.weekday()) % 7
+                        birthday_date += timedelta(days=days_to_monday)
+
+                    upcoming_birthdays_list.append({
+                        "name": record.name.value,
+                        "congratulation_date": birthday_date.strftime("%d/%m/%Y")
+                    })
+
+        return upcoming_birthdays_list
+
+
 # Creating a new address book
 book = AddressBook()
 
@@ -107,7 +137,7 @@ book = AddressBook()
 john_record = Record("John")
 john_record.add_phone("1234567890")
 john_record.add_phone("5555555555")
-john_record.add_birthday("28/03/1996")  # Fix: Provide date as a string
+john_record.add_birthday("02/08/1996")  # Fix: Provide date as a string
 
 # Adding John's record to the address book
 book.add_record(john_record)
@@ -116,6 +146,7 @@ book.add_record(john_record)
 jane_record = Record("Jane")
 jane_record.add_phone("9876543210")
 book.add_record(jane_record)
+jane_record.add_birthday("30/07/2002")
 
 # Printing all records in the book
 for name, record in book.data.items():
@@ -131,5 +162,7 @@ found_phone = john.find_phone("5555555555") if john else None
 if found_phone:
     print(f"{john.name}: {found_phone}")
 
-# Deleting Jane's record
-book.delete("Jane")
+upcoming_birthdays = AddressBook.get_upcoming_birthdays(book.data.values(), days = 7)
+
+print("Upcoming birthdays within 7 days:")
+print(upcoming_birthdays)
